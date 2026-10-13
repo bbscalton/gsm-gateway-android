@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Neuereatec GSM Gateway: cellular calls into the phone system</title>
+  <meta name="description" content="Neuereatec GSM Gateway is an Android app. It answers calls to the phone's SIM and bridges them into the office phone system as a SIP call.">
+  <style>
+    :root {
+      --navy: #0b2545;
+      --ink: #e8eef6;
+      --muted: #9aabbf;
+      --teal: #13c4a3;
+      --teal-ink: #04281f;
+      --amber: #f2b84b;
+      --lcd: #eef2f0;
+      --lcd-ink: #1c2b26;
+      --line: rgba(255, 255, 255, 0.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background:
+        radial-gradient(900px 420px at 80% -10%, rgba(19, 196, 163, 0.18), transparent 60%),
+        var(--navy);
+      color: var(--ink);
+    }
+    a { color: var(--teal); }
+    header, main, footer { width: min(920px, calc(100% - 32px)); margin: 0 auto; }
+    header { display: flex; align-items: center; justify-content: space-between; padding: 28px 0 8px; }
+    .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; letter-spacing: 0.02em; }
+    .mark { width: 36px; height: 36px; }
+    main { padding: 28px 0 64px; }
+    h1 { font-size: clamp(40px, 7vw, 68px); line-height: 0.95; margin: 12px 0 16px; }
+    .lede { font-size: 1.15rem; max-width: 38rem; color: var(--muted); margin: 0 0 28px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 36px; }
+    .download {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--teal); color: var(--teal-ink); text-decoration: none; font-weight: 700;
+      padding: 14px 18px; border-radius: 999px;
+    }
+    .download.alt { background: transparent; color: var(--teal); border: 1px solid var(--teal); }
+    .download:hover { filter: brightness(1.05); }
+    .meta { color: var(--muted); font-size: 0.92rem; }
+    .grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 28px; }
+    @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+    .phone { background: #1a222b; border-radius: 28px; padding: 18px 16px 22px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35); }
+    .lcd {
+      background: var(--lcd); color: var(--lcd-ink); border-radius: 16px; min-height: 132px; padding: 16px 16px 14px;
+      font-family: "Cascadia Mono", "Segoe UI Mono", ui-monospace, monospace;
+    }
+    .lcd .top { display: flex; justify-content: space-between; font-size: 12px; color: #5d6b66; }
+    .lcd strong { display: block; font-size: 22px; margin-top: 18px; }
+    .lcd .ext { margin-top: 8px; font-size: 13px; }
+    .keys { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 14px; }
+    .keys span { background: #2a333d; border-radius: 10px; text-align: center; padding: 10px 0; color: #d5dde6; font-size: 13px; }
+    section h2 { font-size: 1.15rem; margin: 0 0 10px; }
+    ol, ul { margin: 0; padding-left: 1.15rem; color: var(--muted); }
+    li + li { margin-top: 8px; }
+    .card { border: 1px solid var(--line); border-radius: 18px; padding: 18px 18px 8px; margin-top: 18px; }
+    .card.warn { border-color: rgba(242, 184, 75, 0.55); }
+    .card.warn h2 { color: var(--amber); }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0 16px; }
+    th, td { text-align: left; padding: 8px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; width: 38%; }
+    td { color: var(--ink); }
+    .flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0 14px; }
+    .node { background: #13283f; border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; font-size: 0.9rem; min-width: 120px; text-align: center; }
+    .node b { display: block; color: var(--teal); }
+    .node small { color: var(--muted); }
+    .arrow { color: var(--teal); font-size: 1.3rem; }
+    code { background: rgba(255,255,255,0.08); padding: 1px 6px; border-radius: 6px; font-size: 0.88em; }
+    pre { background: #07182e; border: 1px solid var(--line); border-radius: 12px; padding: 12px; overflow-x: auto; color: var(--ink); font-size: 0.85rem; }
+    footer { color: var(--muted); font-size: 0.85rem; padding-bottom: 36px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 108 108" aria-hidden="true">
+        <rect width="108" height="108" rx="24" fill="#07182e"/>
+        <path d="M64 34h14M71 27v14" fill="none" stroke="#13c4a3" stroke-width="3" stroke-linecap="round"/>
+        <path fill="#13c4a3" d="M36 66c-2-10 3-19 13-22l7 5c2 2 2 6-1 8l-4 2c4 8 10 14 18 18l2-4c2-2 6-2 8 0l5 7c2 8-7 13-16 10-20-6-30-16-32-24z"/>
+      </svg>
+      Neuereatec GSM Gateway
+    </div>
+    <a href="gsm-gateway.apk?v=1.0.0">Download</a>
+  </header>
+  <main>
+    <p class="meta">Android · one call per SIM · version 1.0.0</p>
+    <h1>Cellular calls, straight into the phone system.</h1>
+    <p class="lede">Put a SIM in a spare Android phone and leave it on the charger. When someone calls that number, the app answers. It then calls an extension on the office PBX and joins the two calls, so the call can be routed like any other.</p>
+    <div class="actions">
+      <a class="download" href="gsm-gateway.apk?v=1.0.0" download>Download gsm-gateway.apk</a>
+      <a class="download alt" href="gsm-gateway-magisk.zip?v=1.0.0" download>Magisk priv-app module</a>
+      <span class="meta">2.1 MB · Android 8.0+ · release build · SHA-256 <code>fd8f8f40…1b752b9d</code></span>
+    </div>
+
+    <section class="card warn">
+      <h2>Before you install: rooted phones and normal phones sound different</h2>
+      <p class="meta">On a normal phone, Android does not let an app read or feed the audio of a cellular call. So the app turns on the <b>speakerphone</b>. The phone's microphone hears the caller and the loudspeaker plays the extension. It works, but there is echo and room noise. Keep the phone somewhere quiet. The status screen shows <b>Speakerphone (lower quality)</b>.</p>
+      <p class="meta">On a <b>rooted</b> phone (Magisk), install the module as well. Android then treats the app as a system app and lets it use call audio directly. On Android 13 and newer, audio is clean in both directions. On older Android, the caller's side is clean, but the extension's side still goes out by speakerphone. The status screen shows the mode in use.</p>
+    </section>
+
+    <div class="grid" style="margin-top: 28px">
+      <div>
+        <section>
+          <h2>How the bridge works</h2>
+          <div class="flow">
+            <div class="node"><b>Caller</b><small>mobile or landline</small></div>
+            <span class="arrow">→</span>
+            <div class="node"><b>Gateway phone</b><small>SIM · auto-answer</small></div>
+            <span class="arrow">⇄</span>
+            <div class="node"><b>CPBX</b><small>SIP · 100.64.0.1:5060</small></div>
+            <span class="arrow">→</span>
+            <div class="node"><b>Ext 105</b><small>then any extension</small></div>
+          </div>
+          <ol>
+            <li>The app stays registered to the PBX as an ordinary SIP extension. It runs as a foreground service and starts again after a reboot.</li>
+            <li>A cellular call rings. If SIP is registered, the app answers it after a short delay (1.5 s by default).</li>
+            <li>The app sends a SIP INVITE to the target extension (default <b>105</b>). It puts the caller's number in the display name, in <code>P-Asserted-Identity</code> and in <code>X-GSM-Caller</code>.</li>
+            <li>Audio runs both ways as G.711 (PCMU/PCMA). If the PBX sends keypad presses (RFC 2833), the app plays them as tones to the caller. Keys the caller presses reach the PBX as in-band tones.</li>
+            <li>When either side hangs up, the other call ends too.</li>
+          </ol>
+        </section>
+
+        <section style="margin-top: 26px">
+          <h2>Install</h2>
+          <ol>
+            <li>Use a phone with its own SIM. Turn off call waiting and voicemail-on-busy, so a second caller hears busy.</li>
+            <li>Install the <b>Tailscale</b> app and sign it in to the Headscale server, so the phone can reach <code>100.64.0.1</code>. On the office Wi-Fi, a LAN address works too.</li>
+            <li>Download <b>gsm-gateway.apk</b> on the phone and open it. Allow installing from this source if Android asks.</li>
+            <li>Allow the microphone, phone, call logs, answering calls and notifications. Tap <b>Battery</b> and choose <i>Unrestricted</i>.</li>
+            <li>Enter the settings below, or tap <b>Scan QR</b> / <b>Paste link</b>. Then tap <b>Save &amp; restart</b>.</li>
+            <li>Rooted phone only: see <a href="#root">Magisk priv-app</a>.</li>
+          </ol>
+        </section>
+
+        <section class="card">
+          <h2>What to configure</h2>
+          <table>
+            <tr><th>SIP server</th><td><b>100.64.0.1</b> (Headscale). This is the default and works now. <code>neuereatec.org</code> is in the list, but the public address is <b>coming soon</b>: there is no DNS record or port forward yet. A LAN address such as 192.168.x.x also works on site.</td></tr>
+            <tr><th>Port</th><td>5060 (UDP)</td></tr>
+            <tr><th>Extension</th><td>The gateway's own SIP extension (from the administrator)</td></tr>
+            <tr><th>Password</th><td>That extension's SIP password</td></tr>
+            <tr><th>Target extension</th><td>Where cellular calls go: <b>105</b> by default. Use a ring group or IVR number to spread calls.</td></tr>
+            <tr><th>Answer after</th><td>Delay before answering, in milliseconds (1500)</td></tr>
+            <tr><th>Audio mode</th><td>Chosen automatically: <i>Rooted: call audio interception</i>, <i>Rooted: VOICE_CALL capture</i> or <i>Speakerphone (lower quality)</i>. Tick “Force speakerphone mode” to override.</td></tr>
+          </table>
+          <p class="meta">Setup link / QR: <code>gsmgw://setup?server=100.64.0.1&amp;port=5060&amp;ext=EXT&amp;pw=PASS&amp;target=105</code>. The app also accepts <code>sipdesk://setup?…</code> links. If SIPDesk is also installed, Android asks which app should open the link.</p>
+        </section>
+
+        <section class="card">
+          <h2>Test steps</h2>
+          <ol>
+            <li>Open the app. The status should show <b>SIP: Registered</b> and <b>Gateway: Idle</b>. Check that extension 105 is free.</li>
+            <li>From another mobile, call the gateway SIM. The phone should answer within about 2 seconds, and extension 105 should ring with the caller's number.</li>
+            <li>Answer 105 and speak both ways. The status shows <b>In call</b>, the audio mode and a capture level bar.</li>
+            <li>Press keys on 105 (for example in an IVR test). The caller should hear the tones.</li>
+            <li>Hang up on the mobile. 105 should drop. Repeat the call, but hang up on 105 this time. The mobile should drop.</li>
+            <li>Leave 105 unanswered or busy. The cellular call should end when the PBX gives up.</li>
+            <li>Reboot the gateway phone, wait one minute, and check that the status says <b>Registered</b> again without opening the app.</li>
+          </ol>
+        </section>
+
+        <section class="card" id="root">
+          <h2>Rooted phone: Magisk priv-app</h2>
+          <ol>
+            <li>Install and set up the APK first (above).</li>
+            <li>In Magisk, open <b>Modules → Install from storage</b> and pick <b>gsm-gateway-magisk.zip</b>. Reboot the phone.</li>
+            <li>The module copies the app to <code>/system/priv-app/NeuereatecGsmGateway/</code>. It also adds a permission allow-list for <code>CAPTURE_AUDIO_OUTPUT</code>, <code>CALL_AUDIO_INTERCEPTION</code> and <code>MODIFY_PHONE_STATE</code>.</li>
+            <li>Open the app. The audio mode should start with <b>Rooted:</b>. If it still says Speakerphone, check the result with <code>adb shell dumpsys package org.neuereatec.gsmgateway | grep -E "CAPTURE_AUDIO|INTERCEPTION"</code>. Both should show <code>granted=true</code>.</li>
+            <li>To update later, install the new APK normally. It stays privileged because it is signed with the same key. To undo, remove the module in Magisk and reboot.</li>
+          </ol>
+          <p class="meta">Some phone makers lock call audio in their own audio code. On those phones, even root gives silence. If the capture level stays at 0 during a call, tick “Force speakerphone mode”.</p>
+        </section>
+      </div>
+      <aside>
+        <div class="phone" aria-hidden="true">
+          <div class="lcd">
+            <div class="top"><span>100.64.0.1:5060</span><span>UDP</span></div>
+            <strong>Registered</strong>
+            <div class="ext">In call: +592 600 1234 ↔ 105</div>
+            <div class="ext">Audio: Speakerphone (lower quality)</div>
+          </div>
+          <div class="keys">
+            <span>Save &amp; restart</span><span>Scan QR</span>
+            <span>Paste link</span><span>Permissions</span>
+            <span>Battery</span><span>Stop</span>
+          </div>
+        </div>
+        <section class="card">
+          <h2>PBX side</h2>
+          <p class="meta">The gateway needs one normal SIP extension on the PBX (UDP, G.711, <code>dtmf_mode=rfc4733</code>). That extension must be allowed to dial the target. To show the mobile number as the caller ID, set <code>trust_id_inbound=yes</code> on that endpoint. The app sends the number as the display name, so most PBXes show it anyway.</p>
+        </section>
+      </aside>
+    </div>
+  </main>
+  <footer>
+    <p>Audio is G.711 (PCMU and PCMA). One bridged call at a time. A dual-SIM phone takes a call on either SIM, but not on both at once. Source: <a href="https://github.com/bbscalton/gsm-gateway-android">github.com/bbscalton/gsm-gateway-android</a>.</p>
+  </footer>
+</body>
+</html>
