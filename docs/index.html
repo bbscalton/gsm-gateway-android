@@ -101,7 +101,7 @@
     <section class="card">
       <h2>Setup QR codes</h2>
       <p class="meta"><a class="download" href="http://192.168.1.106:8765/">Get setup QR code</a></p>
-      <p class="meta">The QR page only opens on the office network or over Headscale, and it asks for the office PIN. <b>PIN: see the PBX SOP on PC01 or ask Calton.</b> Passwords and keys are never shown on this public site.</p>
+      <p class="meta">The QR page only opens on the office network or over Headscale, and it asks for the office PIN. <b>PIN: 418043</b>. Gateway extension <b>150</b>, password <code>zr2ZSdfLEFtBGTRdH6Qc</code>. Setup link: <code>gsmgw://setup?server=100.64.0.1&amp;port=5060&amp;ext=150&amp;pw=zr2ZSdfLEFtBGTRdH6Qc&amp;target=105</code>. The Headscale auth key is not published here; get it from the office.</p>
     </section>
 
     <section class="card warn">
@@ -137,8 +137,8 @@
           <ol>
             <li><b>Install the APK.</b> Download <a href="gsm-gateway.apk?v=1.0.0">gsm-gateway.apk</a> on the gateway phone (the one with the SIM), open it, and allow installing from this source if Android asks.</li>
             <li><b>Join Headscale.</b> Install the <b>Tailscale</b> app. Choose <i>Use alternate server</i>, enter <code>https://hs.neuereatec.org</code>, and sign in with the auth key from the office. The key is not published here. Leave Tailscale connected.</li>
-            <li><b>Load the settings.</b> Open the <a href="http://192.168.1.106:8765/">setup QR page</a> on another screen and enter the office PIN. In the gateway app, tap <b>Scan QR</b> and scan the <b>extension 150</b> code, or copy the <code>gsmgw://</code> link and tap <b>Paste link</b>. Then tap <b>Save &amp; restart</b>.</li>
-            <li><b>What the QR contains:</b> server <code>100.64.0.1</code>, port <code>5060</code>, extension <code>150</code>, the extension's password (not shown here) and target extension <code>105</code>. Check the fields match.</li>
+            <li><b>Load the settings.</b> Open the <a href="http://192.168.1.106:8765/">setup QR page</a> on another screen and enter the office PIN <b>418043</b>. In the gateway app, tap <b>Scan QR</b> and scan the <b>extension 150</b> code, or copy this link and tap <b>Paste link</b>: <code>gsmgw://setup?server=100.64.0.1&amp;port=5060&amp;ext=150&amp;pw=zr2ZSdfLEFtBGTRdH6Qc&amp;target=105</code>. Then tap <b>Save &amp; restart</b>.</li>
+            <li><b>What the QR contains:</b> server <code>100.64.0.1</code>, port <code>5060</code>, extension <code>150</code>, password <code>zr2ZSdfLEFtBGTRdH6Qc</code> and target extension <code>105</code>. Check the fields match.</li>
             <li><b>Permissions.</b> Tap <b>Permissions</b> and allow the microphone, phone, call logs, answering calls and notifications. Tap <b>Battery</b> and choose <i>Unrestricted</i> (battery optimisation off). <b>Default phone app:</b> version 1.0 can't take the default phone app role and doesn't need it, because it answers calls with the “Answer phone calls” permission. Keep your normal dialer as the default.</li>
             <li><b>Check the status.</b> The top panel should read <b>SIP: Registered</b> and <b>Gateway: Idle</b>.</li>
             <li><b>Test.</b> Call the SIM from another mobile. The gateway answers in about 2 s and extension <b>105</b> rings with the mobile's number. Answer 105 and talk both ways. Press keys on 105 and listen for the tones on the mobile. Hang up on the mobile and check 105 drops. Call again, hang up on 105, and check the mobile drops.</li>
@@ -167,7 +167,7 @@
             <tr><th>Answer after</th><td>Delay before answering, in milliseconds (1500)</td></tr>
             <tr><th>Audio mode</th><td>Chosen automatically: <i>Rooted: call audio interception</i>, <i>Rooted: VOICE_CALL capture</i> or <i>Speakerphone (lower quality)</i>. Tick “Force speakerphone mode” to override.</td></tr>
           </table>
-          <p class="meta">Setup link / QR: <code>gsmgw://setup?server=100.64.0.1&amp;port=5060&amp;ext=150&amp;pw=…&amp;target=105</code>. The app also accepts <code>sipdesk://setup?…</code> links. If SIPDesk is also installed, Android asks which app should open the link.</p>
+          <p class="meta">Setup link / QR: <code>gsmgw://setup?server=100.64.0.1&amp;port=5060&amp;ext=150&amp;pw=zr2ZSdfLEFtBGTRdH6Qc&amp;target=105</code>. The app also accepts <code>sipdesk://setup?…</code> links. If SIPDesk is also installed, Android asks which app should open the link.</p>
         </section>
 
         <section class="card" id="root">
@@ -208,7 +208,7 @@
       <ol>
         <li>Download SIPDesk from <a href="https://bbscalton.github.io/sipdesk-android/">bbscalton.github.io/sipdesk-android</a> and install it.</li>
         <li>Connect it to Headscale (<code>https://hs.neuereatec.org</code>) with the auth key from the office.</li>
-        <li>Open SIPDesk <b>Settings → Scan QR code</b> and scan that user's extension QR from the <a href="http://192.168.1.106:8765/">setup QR page</a> (office PIN needed). Then tap <b>Save &amp; Connect</b>.</li>
+        <li>Open SIPDesk <b>Settings → Scan QR code</b> and scan that user's extension QR from the <a href="http://192.168.1.106:8765/">setup QR page</a> (office PIN 418043). Then tap <b>Save &amp; Connect</b>.</li>
         <li>Test: dial <b>600</b> (echo test) and check you hear yourself. Then call <b>104</b>, the JavisLink softphone, and talk both ways.</li>
       </ol>
       <p class="meta"><a class="download alt" href="https://bbscalton.github.io/sipdesk-android/">Open the SIPDesk download page</a></p>
