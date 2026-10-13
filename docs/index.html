@@ -98,6 +98,126 @@
       <span class="meta">2.1 MB · Android 8.0+ · release build · SHA-256 <code>fd8f8f40…1b752b9d</code></span>
     </div>
 
+    <nav class="card" id="hub" style="margin-top:22px">
+      <h2>PBX hub: management and how-to</h2>
+      <p>This page is the one place for the office phone system (CPBX). Jump to:</p>
+      <ul>
+        <li><a href="#overview">Overview and diagram</a></li>
+        <li><a href="#extensions">Extensions and how to use them</a></li>
+        <li><a href="#javislink">JavisLink softphone (104)</a></li>
+        <li><a href="#sipdesk">SIPDesk</a> · <a href="#setup">GSM Gateway setup</a></li>
+        <li><a href="#add-ext">Adding an extension and its QR</a></li>
+        <li><a href="#remote">Remote use via Headscale</a></li>
+        <li><a href="#network-change">When the network changes</a></li>
+        <li><a href="#pbx-trouble">Troubleshooting</a></li>
+        <li><a href="#staff">Staff quick guide</a></li>
+      </ul>
+    </nav>
+
+    <section class="card" id="overview">
+      <h2>Overview</h2>
+      <p>CPBX is an Asterisk phone system that runs in Docker on the office PC (PC01). It has three containers: <code>cpbx-asterisk</code> (the PBX), <code>cpbx-admin</code> (the web admin) and <code>cpbx-coturn</code> (TURN relay for browser calls).</p>
+      <ul>
+        <li>Office (LAN) address: <b>192.168.1.106</b></li>
+        <li>Tailnet address: <b>100.64.0.1</b>, through Headscale at <a href="https://hs.neuereatec.org">hs.neuereatec.org</a></li>
+        <li>The ISP uses CGNAT, so there is no public IP. Port forwarding cannot work. Phones outside the office must use Headscale.</li>
+      </ul>
+<pre style="white-space:pre;overflow-x:auto;font-size:13px">
+ Office phones (LAN) ----+
+                         |   192.168.1.106:5060
+ SIPDesk / GSM Gateway --+--&gt; PC01: Docker
+   (Headscale tailnet)   |     cpbx-asterisk (PBX)
+   100.64.0.1:5060       |     cpbx-admin  :3000
+                         |     cpbx-coturn :3478
+ JavisLink (browser) ----+
+   wss://sip.neuereatec.org/ws
+
+ Caller -&gt; SIM in gateway phone -&gt; ext 150 -&gt; ext 105
+</pre>
+    </section>
+
+    <section class="card" id="extensions">
+      <h2>Extensions</h2>
+      <ul>
+        <li><b>100</b>: desk extension (remote-ready over Headscale)</li>
+        <li><b>104</b>: JavisLink WebRTC softphone</li>
+        <li><b>105</b>: receives calls from the GSM Gateway (remote-ready)</li>
+        <li><b>150</b>: the GSM Gateway phone (remote-ready)</li>
+        <li><b>1001</b>: extension (remote-ready)</li>
+        <li><b>9487</b>: extension (office LAN only)</li>
+      </ul>
+      <p class="meta">Extensions 101, 102 and 103 are also set up in the PBX config.</p>
+      <h3>How to use them</h3>
+      <ul>
+        <li>To call someone, dial their extension number, for example <b>105</b>.</li>
+        <li>Dial <b>600</b> for the echo test. You hear a short message, then your own voice. That shows your audio works both ways.</li>
+        <li>Dial <b>104</b> to reach the JavisLink softphone.</li>
+      </ul>
+    </section>
+
+    <section class="card" id="javislink">
+      <h2>JavisLink softphone (extension 104)</h2>
+      <p>JavisLink is a browser (WebRTC) softphone on extension 104. It connects to <code>wss://sip.neuereatec.org/ws</code>. To test it, dial 104 from any other extension.</p>
+    </section>
+
+    <section class="card" id="add-ext">
+      <h2>Adding an extension and its QR</h2>
+      <ol>
+        <li>On PC01, open CPBX Admin at <a href="http://localhost:3000">http://localhost:3000</a>. From another office computer, use <code>http://192.168.1.106:3000</code>.</li>
+        <li>Create the extension and save it.</li>
+        <li>Open the <a href="http://192.168.1.106:8765/">setup QR page</a> (office LAN only) and enter the PIN <b>418043</b>. The new extension's QR shows up within about 30 seconds.</li>
+        <li>Scan it in SIPDesk (<b>Settings → Scan QR code</b>) or in the GSM Gateway app (<b>Scan QR</b>).</li>
+        <li>Tap <b>New key</b> on the QR page if you need a fresh code.</li>
+      </ol>
+      <p class="meta">To make a new extension work outside the office, add its number to <code>CPBX_TAILNET_EXTS</code> in <code>docker-compose.yml</code>. Then run <code>docker compose up -d</code> and save any one extension in admin.</p>
+    </section>
+
+    <section class="card" id="remote">
+      <h2>Remote use via Headscale</h2>
+      <ul>
+        <li>Outside the office, phones reach the PBX at <b>100.64.0.1</b> over the Headscale tailnet (<a href="https://hs.neuereatec.org">hs.neuereatec.org</a>).</li>
+        <li><b>SIPDesk</b>: set the server to 100.64.0.1 and tick <b>Use tailnet address for SIP</b>.</li>
+        <li><b>GSM Gateway</b>: the phone needs the Tailscale app, logged in to Headscale. Use a different phone from the SIPDesk one.</li>
+        <li>Remote-ready extensions today: 100, 105, 150, 1001.</li>
+        <li>Ask Calton for the Headscale login. It is not published here.</li>
+      </ul>
+    </section>
+
+    <section class="card" id="network-change">
+      <h2>When the network changes</h2>
+      <p>Use this when PC01's office IP changes, for example after a new router, a new DHCP lease or an office move.</p>
+      <ol>
+        <li>On PC01, open Command Prompt and run <code>ipconfig</code>. Note the IPv4 address.</li>
+        <li>Double-click <b>Change-PBX-IP.bat</b> on the Desktop. You do not need Run as administrator.</li>
+        <li>Type the new IP and press Enter. The script checks the IP is valid and backs up <code>docker-compose.yml</code>. It changes only <code>CPBX_ADVERTISE_IP</code> and restarts with <code>docker compose up -d</code>. Then it shows <b>SUCCESS</b> or the error.</li>
+        <li>After SUCCESS, open CPBX Admin and save any one extension.</li>
+        <li>Dial <b>600</b> to test.</li>
+      </ol>
+      <p class="meta">The script has not been run for real yet. The Headscale settings are not touched.</p>
+    </section>
+
+    <section class="card" id="pbx-trouble">
+      <h2>PBX troubleshooting</h2>
+      <ul>
+        <li><b>No audio or one-way audio:</b> dial 600. If you cannot hear yourself, check that the office IP is still right (see <a href="#network-change">When the network changes</a>).</li>
+        <li><b>SIPDesk will not connect away from the office:</b> run only one VPN on the phone. Android allows just one, and the Tailscale app kicks SIPDesk's tunnel off.</li>
+        <li><b>The app drops after a while:</b> set its battery setting to <b>Unrestricted</b>.</li>
+        <li><b>Still stuck:</b> force-stop the app and open it again.</li>
+        <li><b>QR page will not open:</b> it only works on the office network (192.168.1.106:8765).</li>
+      </ul>
+    </section>
+
+    <section class="card" id="staff">
+      <h2>Staff quick guide</h2>
+      <ul>
+        <li>To call a colleague, dial their extension.</li>
+        <li>To test your phone, dial 600 and speak. You should hear yourself.</li>
+        <li>To reach the softphone, dial 104.</li>
+        <li>If your phone is new, open the QR page in the office, enter PIN 418043, and scan your extension in SIPDesk.</li>
+        <li>If something breaks, force-stop and reopen the app, then tell Calton.</li>
+      </ul>
+    </section>
+
     <section class="card">
       <h2>Setup QR codes</h2>
       <p class="meta"><a class="download" href="http://192.168.1.106:8765/">Get setup QR code</a></p>
@@ -147,7 +267,7 @@
         </section>
 
         <section class="card">
-          <h2>Troubleshooting</h2>
+          <h2>Gateway troubleshooting</h2>
           <table>
             <tr><th>Level bar stays at 0 during a call</th><td>The phone is blocking call audio. Tick <b>Force speakerphone mode</b>, tap Save &amp; restart, and call again.</td></tr>
             <tr><th>Not registered</th><td>Check Tailscale: it must be connected to <code>hs.neuereatec.org</code>, and the phone must reach <code>100.64.0.1</code>. Then check the extension and password (scan the QR again).</td></tr>
