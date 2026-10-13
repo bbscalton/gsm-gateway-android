@@ -104,6 +104,7 @@
       <ul>
         <li><a href="#overview">Overview and diagram</a></li>
         <li><a href="#extensions">Extensions and how to use them</a></li>
+        <li><a href="#downloads">Softphone downloads and links</a></li>
         <li><a href="#javislink">JavisLink softphone (104)</a></li>
         <li><a href="#sipdesk">SIPDesk</a> · <a href="#setup">GSM Gateway setup</a></li>
         <li><a href="#add-ext">Adding an extension and its QR</a></li>
@@ -155,9 +156,25 @@
       </ul>
     </section>
 
+    <section class="card" id="downloads">
+      <h2>Softphone downloads and links</h2>
+      <ul>
+        <li><b>SIPDesk 2.1.1</b> (Android desk phone): <a href="https://bbscalton.github.io/sipdesk-android/sipdesk.apk?v=2.1.1">sipdesk.apk</a> · <a href="https://bbscalton.github.io/sipdesk-android/">download page</a></li>
+        <li><b>GSM Gateway 1.0.0</b> (SIM bridge): <a href="gsm-gateway.apk?v=1.0.0">gsm-gateway.apk</a> · <a href="gsm-gateway-magisk.zip?v=1.0.0">Magisk module</a></li>
+        <li><b>JavisLink softphone</b> (opens in the browser, nothing to install): <a href="https://javis.neuereatec.org/softphone/">javis.neuereatec.org/softphone</a></li>
+        <li>Setup QR page (office Wi-Fi only): <a href="http://192.168.1.106:8765/">192.168.1.106:8765</a>, PIN <b>418043</b></li>
+      </ul>
+      <h3>Assigning an extension to each softphone</h3>
+      <ul>
+        <li><b>SIPDesk:</b> open <b>Settings → Scan QR code</b>, scan the <b>Extension N</b> QR, then tap <b>Save &amp; Connect</b>.</li>
+        <li><b>GSM Gateway:</b> tap <b>Scan QR</b> and scan the extension 150 QR, or paste the setup link in the <a href="#setup">setup steps</a>.</li>
+        <li><b>JavisLink:</b> point the phone's normal camera at the <b>JavisLink N</b> QR and open the link. The softphone opens, saves the extension and password, and signs in. You can still type the extension and password in its Settings.</li>
+      </ul>
+    </section>
+
     <section class="card" id="javislink">
       <h2>JavisLink softphone (extension 104)</h2>
-      <p>JavisLink is a browser (WebRTC) softphone on extension 104. It connects to <code>wss://sip.neuereatec.org/ws</code>. To test it, dial 104 from any other extension.</p>
+      <p>JavisLink is a browser softphone at <a href="https://javis.neuereatec.org/softphone/">javis.neuereatec.org/softphone</a>. It registers on extension 104 through <code>wss://sip.neuereatec.org/ws</code>. To set it up, scan the <b>JavisLink 104</b> QR on the setup QR page with the phone camera. To test it, dial 104 from any other extension.</p>
     </section>
 
     <section class="card" id="add-ext">
@@ -166,7 +183,7 @@
         <li>On PC01, open CPBX Admin at <a href="http://localhost:3000">http://localhost:3000</a>. From another office computer, use <code>http://192.168.1.106:3000</code>.</li>
         <li>Create the extension and save it.</li>
         <li>Open the <a href="http://192.168.1.106:8765/">setup QR page</a> (office LAN only) and enter the PIN <b>418043</b>. The new extension's QR shows up within about 30 seconds.</li>
-        <li>Scan it in SIPDesk (<b>Settings → Scan QR code</b>) or in the GSM Gateway app (<b>Scan QR</b>).</li>
+        <li>Scan it in SIPDesk (<b>Settings → Scan QR code</b>) or in the GSM Gateway app (<b>Scan QR</b>). For JavisLink, scan the second <b>JavisLink</b> QR with the phone camera.</li>
         <li>Tap <b>New key</b> on the QR page if you need a fresh code.</li>
       </ol>
       <p class="meta">To make a new extension work outside the office, add its number to <code>CPBX_TAILNET_EXTS</code> in <code>docker-compose.yml</code>. Then run <code>docker compose up -d</code> and save any one extension in admin.</p>
