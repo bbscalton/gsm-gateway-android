@@ -12,8 +12,8 @@ android {
         applicationId = "org.neuereatec.gsmgateway"
         minSdk = 26
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.2.0"
+        versionCode = 6
+        versionName = "1.2.2"
         ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a") }
     }
     // Keystore details live in signing.properties (not committed).

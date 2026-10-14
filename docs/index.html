@@ -85,15 +85,16 @@
       </svg>
       Neuereatec GSM Gateway
     </div>
-    <a href="gsm-gateway.apk?v=1.2.0">Download</a>
+    <a href="gsm-gateway.apk?v=1.2.2">Download</a>
   </header>
   <main>
-    <p class="meta">Android · one call per SIM · version 1.2.0 · built-in Headscale tunnel</p>
+    <p class="meta">Android · one call per SIM · version 1.2.2 · built-in Headscale tunnel</p>
     <h1>Cellular calls, straight into the phone system.</h1>
     <p class="lede">Put a SIM in a spare Android phone and leave it on the charger. When someone calls that number, the app answers. It then calls an extension on the office PBX and joins the two calls, so the call can be routed like any other.</p>
     <div class="actions">
-      <p class="meta"><b>New in 1.2.0:</b> optional OTP SMS sender for office login codes (separate from call handling). Set it up by scanning the &ldquo;OTP SMS sender&rdquo; QR on the office QR page, then allow SMS. The status card shows SMS sent/failed.</p>
-<a class="download" href="gsm-gateway.apk?v=1.2.0" download>Download gsm-gateway.apk</a>
+      <p class="meta"><b>New in 1.2.2:</b> fixes the app freezing and being closed by Android ("not responding") when the tunnel stops or reconnects, and adds a tunnel health check: if the office server stops answering through the tunnel, the app shows "Stalled" and rebuilds the tunnel by itself instead of showing a stale "Online".</p>
+<p class="meta"><b>New in 1.2.0:</b> optional OTP SMS sender for office login codes (separate from call handling). Set it up by scanning the &ldquo;OTP SMS sender&rdquo; QR on the office QR page, then allow SMS. The status card shows SMS sent/failed.</p>
+<a class="download" href="gsm-gateway.apk?v=1.2.2" download>Download gsm-gateway.apk</a>
       <a class="download alt" href="http://192.168.1.106:8765/">Get setup QR code</a>
       <a class="download alt" href="gsm-gateway-magisk.zip?v=1.1.1" download>Magisk priv-app module</a>
       <span class="meta">2.1 MB · Android 8.0+ · release build · SHA-256 <code>fd8f8f40…1b752b9d</code></span>
@@ -161,7 +162,7 @@
       <h2>Softphone downloads and links</h2>
       <ul>
         <li><b>SIPDesk 2.2.0</b> (Android desk phone): <a href="https://bbscalton.github.io/sipdesk-android/sipdesk.apk?v=2.2.0">sipdesk.apk</a> · <a href="https://bbscalton.github.io/sipdesk-android/">download page</a></li>
-        <li><b>GSM Gateway 1.2.0</b> (SIM bridge): <a href="gsm-gateway.apk?v=1.2.0">gsm-gateway.apk</a> · <a href="gsm-gateway-magisk.zip?v=1.1.1">Magisk module</a></li>
+        <li><b>GSM Gateway 1.2.2</b> (SIM bridge): <a href="gsm-gateway.apk?v=1.2.2">gsm-gateway.apk</a> · <a href="gsm-gateway-magisk.zip?v=1.1.1">Magisk module</a></li>
         <li><b>JavisLink softphone</b> (opens in the browser, nothing to install): <a href="https://javis.neuereatec.org/softphone/">javis.neuereatec.org/softphone</a></li>
         <li>Setup QR page (office Wi-Fi only): <a href="http://192.168.1.106:8765/">192.168.1.106:8765</a>, PIN <b>418043</b></li>
       </ul>
@@ -273,7 +274,7 @@
         <section style="margin-top: 26px" id="setup">
           <h2>Gateway setup, step by step</h2>
           <ol>
-            <li><b>Install the APK.</b> Download <a href="gsm-gateway.apk?v=1.2.0">gsm-gateway.apk</a> on the gateway phone (the one with the SIM), open it, and allow installing from this source if Android asks.</li>
+            <li><b>Install the APK.</b> Download <a href="gsm-gateway.apk?v=1.2.2">gsm-gateway.apk</a> on the gateway phone (the one with the SIM), open it, and allow installing from this source if Android asks.</li>
             <li><b>No Tailscale app needed.</b> Version 1.1 has the Headscale (WireGuard) client built in. The QR carries the join key; the app brings the tunnel up first, then registers SIP over it. Android asks once to allow the VPN: tap <b>OK</b>. If the Tailscale app is installed, turn it off (only one VPN can run).</li>
             <li><b>Scan the gateway QR.</b> Open the <a href="http://192.168.1.106:8765/">setup QR page</a> on an office screen, enter the PIN, find <b>GSM Gateway &mdash; 150</b>. In the app tap <b>Scan QR</b>. SIPDesk softphone codes are refused on purpose.</li>
             <li><b>Choose who rings.</b> The app asks <i>Which extension should incoming cellular calls ring?</i> Type the main extension, e.g. <code>100</code>, and add more separated by commas (<code>100, 105</code>): the PBX rings them in that order, 20 s each, skips anyone busy or offline, then goes to the first one's voicemail. Numbers are used exactly as typed. Leave it blank for the PBX default (100). Change it later under <b>Bridge</b> &rarr; <b>Change ring order</b>.</li>
