@@ -6,3 +6,4 @@ signing.properties
 *.jks
 .idea/
 *.iml
+app/libs/*.aar

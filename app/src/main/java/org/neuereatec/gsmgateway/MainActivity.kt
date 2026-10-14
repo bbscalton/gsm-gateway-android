@@ -25,6 +25,9 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
+import android.app.AlertDialog
+import android.net.VpnService
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 
@@ -41,6 +44,10 @@ class MainActivity : ComponentActivity() {
     private lateinit var ext: EditText
     private lateinit var pw: EditText
     private lateinit var target: EditText
+    private lateinit var ring: EditText
+    private lateinit var route: EditText
+    private lateinit var hsUrl: EditText
+    private lateinit var hsKey: EditText
     private lateinit var delay: EditText
     private lateinit var auto: CheckBox
     private lateinit var acoustic: CheckBox
@@ -55,7 +62,49 @@ class MainActivity : ComponentActivity() {
         fill(Settings.load(this))
         intent?.data?.let { applyLink(it.toString()) }
         askPermissions()
-        if (Settings.load(this).usable) GatewayService.start(this)
+        startAll()
+        if (Settings.load(this).usable && !Settings.targetAsked(this)) askTarget()
+    }
+
+    private val vpnConsent = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
+        if (r.resultCode == RESULT_OK) startAll() else toast("The gateway needs the VPN permission to reach the office over Headscale")
+    }
+
+    /** Tunnel first (VpnService), then the gateway service, which registers SIP once the tunnel is up. */
+    private fun startAll(reset: Boolean = false) {
+        val s = Settings.load(this)
+        if (!s.usable) return
+        if (s.tunnelWanted) {
+            val consent = VpnService.prepare(this)
+            if (consent != null) { vpnConsent.launch(consent); return }
+            TunnelVpnService.start(this, reset)
+        } else TunnelVpnService.stop(this)
+        GatewayService.start(this)
+    }
+
+    /** "Which extension should incoming cellular calls ring?" Digits only; several = tried in order. */
+    private fun askTarget() {
+        val cur = Settings.load(this)
+        val input = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_PHONE; hint = "e.g. 100, 105"
+            setText(cur.targets.joinToString(", "))
+        }
+        val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(8), dp(20), 0)
+            addView(TextView(this@MainActivity).apply { text = "Type the main extension. Add more, separated by commas, to ring next if it is busy or does not answer (in that order). Leave blank to let CPBX route the call ('${cur.route}')." })
+            addView(input) }
+        val d = AlertDialog.Builder(this).setTitle("Which extension should incoming cellular calls ring?")
+            .setView(box).setPositiveButton("Save", null).setNegativeButton("Later", null).create()
+        d.setOnShowListener {
+            d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val list = Settings.parseTargets(input.text.toString())
+                if (list == null) { input.error = "Digits only, separated by commas"; return@setOnClickListener }
+                val s = Settings.load(this).copy(targets = list)
+                Settings.save(this, s); fill(s); d.dismiss()
+                toast(if (list.isEmpty()) "Calls go to CPBX route '${s.route}'" else "Calls ring ${s.targetLabel}")
+                GatewayService.stop(this); ui.postDelayed({ startAll() }, 600)
+            }
+        }
+        d.show()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -70,6 +119,13 @@ class MainActivity : ComponentActivity() {
         val g = GatewayState
         val mode = g.audioMode
         status.text = buildString {
+            val s = Settings.load(this@MainActivity)
+            if (s.tunnelWanted) {
+                append("Tunnel:       ").append(if (g.tunnelReady) "Online" else g.tunnelState.ifBlank { "Offline" }).append('\n')
+                append("Tailnet IP:   ").append(g.tunnelIp.ifBlank { "-" }).append('\n')
+                if (!g.tunnelReady && g.tunnelDetail.isNotBlank()) append("              ").append(g.tunnelDetail.take(60)).append('\n')
+            } else append("Tunnel:       not configured (direct SIP)\n")
+            append("Rings:        ").append(s.targetLabel).append('\n')
             append("SIP:          ").append(if (g.registered) "Registered" else "Not registered").append('\n')
             append("              ").append(g.sip).append('\n')
             append("Gateway:      ").append(g.gateway).append('\n')
@@ -98,9 +154,21 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun applyLink(link: String) {
-        val s = Settings.fromLink(link, read())
-        if (s == null) { toast("Setup link not recognised"); return }
-        fill(s); toast("Imported. Check the fields, then tap Save & restart.")
+        when (val r = Settings.fromLink(link, read())) {
+            is Settings.Companion.LinkResult.Softphone -> AlertDialog.Builder(this).setTitle("That is a SIPDesk softphone code")
+                .setMessage("This QR sets up a desk phone in the SIPDesk app, not the gateway. On the CPBX QR page, use the 'GSM gateway' code for extension 150.")
+                .setPositiveButton("OK", null).show()
+            is Settings.Companion.LinkResult.Bad -> toast("Not a GSM gateway setup code")
+            is Settings.Companion.LinkResult.Ok -> {
+                val s = r.settings
+                val hsChanged = s.hsKey != Settings.load(this).hsKey
+                Settings.save(this, s); fill(s)
+                toast("Gateway configured for ext ${s.ext}${if (s.tunnelWanted) " with Headscale" else ""}")
+                GatewayService.stop(this); if (hsChanged) TunnelVpnService.stop(this)
+                ui.postDelayed({ startAll(reset = hsChanged) }, 800)
+                if (!r.targetGiven && s.targets.isEmpty()) ui.postDelayed({ askTarget() }, 900)
+            }
+        }
     }
 
     private fun read() = Settings(
@@ -108,7 +176,11 @@ class MainActivity : ComponentActivity() {
         port = port.text.toString().toIntOrNull() ?: 5060,
         ext = ext.text.toString().trim(),
         password = pw.text.toString(),
-        target = target.text.toString().trim().ifEmpty { "105" },
+        targets = Settings.parseTargets(target.text.toString()) ?: Settings.load(this).targets,
+        ringSeconds = ring.text.toString().toIntOrNull()?.coerceIn(5, 120) ?: 20,
+        route = route.text.toString().trim().ifEmpty { Settings.DEFAULT_ROUTE },
+        hsUrl = hsUrl.text.toString().trim(),
+        hsKey = hsKey.text.toString().trim(),
         autoAnswer = auto.isChecked,
         answerDelayMs = delay.text.toString().toIntOrNull()?.coerceIn(0, 20000) ?: 1500,
         forceAcoustic = acoustic.isChecked,
@@ -116,16 +188,19 @@ class MainActivity : ComponentActivity() {
 
     private fun fill(s: Settings) {
         server.setText(s.server); port.setText(s.port.toString()); ext.setText(s.ext); pw.setText(s.password)
-        target.setText(s.target); delay.setText(s.answerDelayMs.toString())
+        target.setText(s.targets.joinToString(", ")); ring.setText(s.ringSeconds.toString()); route.setText(s.route)
+        hsUrl.setText(s.hsUrl); hsKey.setText(s.hsKey); delay.setText(s.answerDelayMs.toString())
         auto.isChecked = s.autoAnswer; acoustic.isChecked = s.forceAcoustic
     }
 
     private fun save() {
         val s = read()
         if (!s.usable) { toast("Server and extension are required"); return }
+        if (Settings.parseTargets(target.text.toString()) == null) { target.error = "Digits only, separated by commas"; return }
         Settings.save(this, s)
         GatewayService.stop(this)
-        ui.postDelayed({ GatewayService.start(this) }, 600)
+        TunnelVpnService.stop(this)
+        ui.postDelayed({ startAll() }, 800)
         toast("Saved. Re-registering…")
     }
 
@@ -142,6 +217,11 @@ class MainActivity : ComponentActivity() {
         }
         root.addView(status, lp(top = 16))
 
+        root.addView(section("Headscale tunnel"))
+        hsUrl = edit("Headscale URL (blank = no tunnel)"); root.addView(hsUrl)
+        hsKey = edit("Pre-auth key (from the gateway QR)", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD); root.addView(hsKey)
+        root.addView(button("Reconnect tunnel", small = true) { TunnelVpnService.stop(this); ui.postDelayed({ startAll() }, 800) })
+
         root.addView(section("SIP server"))
         server = edit("Server (100.64.0.1 Headscale)")
         root.addView(server)
@@ -149,13 +229,17 @@ class MainActivity : ComponentActivity() {
             addView(chip("Headscale 100.64.0.1") { server.setText(Settings.DEFAULT_SERVER) }, LinearLayout.LayoutParams(0, -2, 1f))
             addView(chip("neuereatec.org (soon)") { server.setText(Settings.PUBLIC_SERVER) }, LinearLayout.LayoutParams(0, -2, 1f))
         })
-        root.addView(text("neuereatec.org is not reachable from outside yet; use the Headscale address (Tailscale app connected) or a LAN address such as 192.168.x.x.", 12f, muted))
+        root.addView(text("Use 100.64.0.1 with the built-in Headscale tunnel above (no Tailscale app needed), or a LAN address such as 192.168.x.x with the tunnel blank.", 12f, muted))
         port = edit("Port", InputType.TYPE_CLASS_NUMBER); root.addView(port)
         ext = edit("Extension", InputType.TYPE_CLASS_NUMBER); root.addView(ext)
         pw = edit("Password", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD); root.addView(pw)
 
         root.addView(section("Bridge"))
-        target = edit("Target extension (105)", InputType.TYPE_CLASS_PHONE); root.addView(target)
+        root.addView(text("Ring order: first extension, then the next ones if busy or no answer. Blank = CPBX route.", 12f, muted))
+        target = edit("Extensions in order, e.g. 100, 105", InputType.TYPE_CLASS_PHONE); root.addView(target)
+        ring = edit("Ring each for (seconds)", InputType.TYPE_CLASS_NUMBER); root.addView(ring)
+        route = edit("CPBX route when list is blank (gsmgw)"); root.addView(route)
+        root.addView(button("Change ring order\u2026", small = true) { askTarget() })
         delay = edit("Answer after (ms)", InputType.TYPE_CLASS_NUMBER); root.addView(delay)
         auto = check("Auto-answer cellular calls"); root.addView(auto)
         acoustic = check("Force speakerphone mode (ignore root audio)"); root.addView(acoustic)
@@ -163,7 +247,7 @@ class MainActivity : ComponentActivity() {
         root.addView(button("Save & restart", primary = true) { save() }, lp(top = 12))
         root.addView(LinearLayout(this).apply {
             addView(button("Scan QR") {
-                scan.launch(ScanOptions().setPrompt("Scan setup QR").setBeepEnabled(false).setOrientationLocked(false))
+                scan.launch(ScanOptions().setPrompt("Scan the GSM gateway QR (CPBX QR page)").setBeepEnabled(false).setOrientationLocked(false))
             }, LinearLayout.LayoutParams(0, -2, 1f))
             addView(button("Paste link") {
                 val clip = getSystemService(ClipboardManager::class.java).primaryClip?.getItemAt(0)?.text?.toString()
@@ -173,7 +257,7 @@ class MainActivity : ComponentActivity() {
         root.addView(LinearLayout(this).apply {
             addView(button("Permissions") { askPermissions() }, LinearLayout.LayoutParams(0, -2, 1f))
             addView(button("Battery") { askBattery() }, LinearLayout.LayoutParams(0, -2, 1f))
-            addView(button("Stop") { GatewayService.stop(this@MainActivity) }, LinearLayout.LayoutParams(0, -2, 1f))
+            addView(button("Stop") { GatewayService.stop(this@MainActivity); TunnelVpnService.stop(this@MainActivity) }, LinearLayout.LayoutParams(0, -2, 1f))
         })
 
         root.addView(section("Audio modes"))

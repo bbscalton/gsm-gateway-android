@@ -22,3 +22,8 @@ Download page: https://bbscalton.github.io/gsm-gateway-android/
 gradlew assembleRelease
 ```
 Release signing reads `signing.properties` (not committed): `storeFile`, `storePassword`, `keyAlias`, `keyPassword`.
+
+## 1.1.0: built-in Headscale tunnel
+
+The Headscale/WireGuard engine is the SIPDesk tunnel.aar (Go, gomobile). It is not committed (31 MB): copy sipdesk-android/app/libs/tunnel.aar to app/libs/ before building. Setup is a gsmgw://setup?server=&port=&ext=&pw=&hs=&hskey=&target=&ring=&route= QR from the office QR page. target is an ordered ring list (100,105); blank = send to the CPBX route (default gsmgw) and let CPBX hunt. No passwords or keys are in this repo or APK.
+

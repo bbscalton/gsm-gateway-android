@@ -59,16 +59,42 @@ class GatewayService : Service(), SipUa.Listener {
         GatewayState.audioMode = AudioBridge.probe(this, settings.forceAcoustic)
         GatewayState.gateway = "Idle"
         registerReceiver(phoneReceiver, IntentFilter(TelephonyManager.ACTION_PHONE_STATE_CHANGED))
-        if (settings.usable) {
-            GatewayState.sip = "Registering to ${settings.server}:${settings.port}"
-            sip = SipUa(settings, this).also { it.start() }
-        } else GatewayState.sip = "Not configured"
+        if (!settings.usable) GatewayState.sip = "Not configured"
+        else {
+            if (settings.tunnelWanted) {
+                GatewayState.sip = "Waiting for tunnel"
+                TunnelVpnService.start(this)
+            }
+            main.post(gate)
+        }
         GatewayState.log("Service started; audio mode ${GatewayState.audioMode.label}")
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int) = START_STICKY
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Every startForegroundService() must be answered, also when the service already runs.
+        updateNote()
+        return START_STICKY
+    }
+
+    /** Tunnel first: SIP registers only once the tailnet is up, and is dropped if it goes down. */
+    private val gate = object : Runnable {
+        override fun run() {
+            val up = !settings.tunnelWanted || GatewayState.tunnelReady
+            if (up && sip == null) {
+                GatewayState.sip = "Registering to ${settings.server}:${settings.port}"
+                GatewayState.log(if (settings.tunnelWanted) "Tunnel up (${GatewayState.tunnelIp}); starting SIP" else "Starting SIP (no tunnel configured)")
+                sip = SipUa(settings, this@GatewayService).also { it.start() }
+            } else if (!up && sip != null && !bridging) {
+                GatewayState.log("Tunnel down; SIP paused until it reconnects")
+                sip?.stop(); sip = null
+                GatewayState.registered = false; GatewayState.sip = "Waiting for tunnel"; updateNote()
+            }
+            main.postDelayed(this, 2000)
+        }
+    }
 
     override fun onDestroy() {
+        main.removeCallbacks(gate)
         try { unregisterReceiver(phoneReceiver) } catch (_: Exception) {}
         endBridge("Service stopped", hangGsm = false)
         sip?.stop(); sip = null
@@ -99,7 +125,7 @@ class GatewayService : Service(), SipUa.Listener {
     }
 
     private fun updateNote() {
-        val t = "${if (GatewayState.registered) "Registered" else "Not registered"} · ${GatewayState.gateway}"
+        val t = "${if (GatewayState.tunnelReady) "Tunnel ${GatewayState.tunnelIp} \u00b7 " else ""}${if (GatewayState.registered) "Registered" else "Not registered"} · ${GatewayState.gateway}"
         goForeground(bridging, t)
     }
 
@@ -167,38 +193,69 @@ class GatewayService : Service(), SipUa.Listener {
         sipLegUp = false
         GatewayState.lastCaller = caller.ifBlank { "Withheld" }
         GatewayState.lastCallAt = java.text.SimpleDateFormat("dd MMM HH:mm", java.util.Locale.US).format(java.util.Date())
-        GatewayState.gateway = "Calling ext ${settings.target}"
+        hop = -1
         wake = (getSystemService(POWER_SERVICE) as PowerManager)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "gsmgw:call").apply { acquire(4 * 60 * 60 * 1000L) }
         updateNote()
         val r = Rtp()
         rtp = r
-        GatewayState.log("Bridging ${GatewayState.lastCaller} -> ext ${settings.target}")
-        sip?.invite(caller, r.localPort) ?: endBridge("SIP not running", hangGsm = true)
+        GatewayState.log("Bridging ${GatewayState.lastCaller} -> ${settings.targetLabel}")
+        sip?.huntList = settings.targets.joinToString(",")
+        nextHop(caller)
+    }
+
+    private var hop = -1
+    private var bridgeCaller = ""
+    private val ringTimeout = Runnable {
+        if (bridging && !sipLegUp) {
+            GatewayState.log("No answer in ${settings.ringSeconds}s at ${settings.dialPlan.getOrNull(hop)}")
+            sip?.hangup()   // CANCEL; no onEnded comes back for our own cancel
+            main.postDelayed({ if (bridging && !sipLegUp) nextHop(bridgeCaller) }, 300)
+        }
+    }
+
+    /** Ring the next extension in the list; route mode has a single hop and no app timer. */
+    private fun nextHop(caller: String) {
+        bridgeCaller = caller
+        main.removeCallbacks(ringTimeout)
+        val plan = settings.dialPlan
+        hop++
+        if (hop >= plan.size) { endBridge("Nobody answered (${settings.targetLabel})", hangGsm = true); return }
+        val t = plan[hop]
+        GatewayState.gateway = "Ringing $t (${hop + 1}/${plan.size})"
+        updateNote()
+        GatewayState.log("Ringing $t")
+        val r = rtp ?: return
+        if (sip == null) { endBridge("SIP not running", hangGsm = true); return }
+        sip?.invite(caller, r.localPort, t)
+        if (!settings.routeMode) main.postDelayed(ringTimeout, settings.ringSeconds * 1000L)
     }
 
     override fun onAnswered(remoteIp: String, remotePort: Int, payloadType: Int, dtmfPt: Int) = main.post {
         val r = rtp ?: return@post
         if (!bridging) { sip?.hangup(); return@post }
         sipLegUp = true
+        main.removeCallbacks(ringTimeout)
         r.start(remoteIp, remotePort, payloadType, dtmfPt)
         val b = AudioBridge(this, r)
         bridge = b
         val used = b.start(AudioBridge.probe(this, settings.forceAcoustic))
         GatewayState.audioMode = used
-        GatewayState.gateway = "In call: ${GatewayState.lastCaller} ↔ ${settings.target}"
+        GatewayState.gateway = "In call: ${GatewayState.lastCaller} ↔ ${settings.dialPlan.getOrNull(hop)}"
         updateNote()
     }.let {}
 
     override fun onEnded(reason: String) = main.post {
         GatewayState.log("SIP leg ended: $reason")
-        if (bridging) endBridge(reason, hangGsm = true)
+        if (bridging && !sipLegUp && !settings.routeMode) nextHop(bridgeCaller)  // busy/unavailable/no answer -> hop
+        else if (bridging) endBridge(reason, hangGsm = true)
     }.let {}
 
     @SuppressLint("MissingPermission")
     private fun endBridge(reason: String, hangGsm: Boolean) {
         if (!bridging) return
         bridging = false
+        main.removeCallbacks(ringTimeout)
         bridge?.stop(); bridge = null
         sip?.hangup()
         rtp?.close(); rtp = null

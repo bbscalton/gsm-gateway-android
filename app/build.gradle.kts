@@ -12,8 +12,9 @@ android {
         applicationId = "org.neuereatec.gsmgateway"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
+        ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a") }
     }
     // Keystore details live in signing.properties (not committed).
     val signingProps = Properties()
@@ -33,6 +34,7 @@ android {
             isMinifyEnabled = false
         }
     }
+    packaging { jniLibs { useLegacyPackaging = true } }
     lint { abortOnError = false; checkReleaseBuilds = false }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -42,6 +44,7 @@ android {
 }
 
 dependencies {
+    implementation(files("libs/tunnel.aar"))
     implementation("androidx.core:core-ktx:1.16.0")
     implementation("androidx.activity:activity-ktx:1.10.1")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")

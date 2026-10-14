@@ -40,7 +40,7 @@ class SipUa(private val s: Settings, private val l: Listener) {
         var cseq: Int = 1, var branch: String = "", var toTag: String? = null,
         var remoteTarget: String? = null, var provisional: Boolean = false,
         var established: Boolean = false, var authTries: Int = 0, var lastInvite: String = "",
-        var tries: Int = 0,
+        var tries: Int = 0, val target: String = "",
     )
 
     private val exec = Executors.newSingleThreadScheduledExecutor()
@@ -160,15 +160,19 @@ class SipUa(private val s: Settings, private val l: Listener) {
     // ---------------------------------------------------------------- INVITE
 
     /** Place the bridge call. [rtpPort] is the local RTP socket already opened by the caller. */
-    fun invite(callerId: String, rtpPort: Int) = exec.execute {
+    fun invite(callerId: String, rtpPort: Int, target: String) = exec.execute {
         if (call != null) return@execute
         if (dest == null && !resolve()) { l.onEnded("Server unreachable"); return@execute }
-        val c = Call(rnd() + "@gsmgw", rnd(), callerId, rtpPort)
+        val c = Call(rnd() + "@gsmgw", rnd(), callerId, rtpPort, target = target)
+        cur = target
         call = c
         sendInvite(c, null)
     }
 
-    private fun targetUri() = "sip:${s.target}@$domain"
+    @Volatile private var cur = ""
+    /** Sent as X-GSM-Targets so a CPBX route can hunt the list itself (route mode). */
+    @Volatile var huntList = ""
+    private fun targetUri() = "sip:${(call?.target ?: cur)}@$domain"
 
     private fun sendInvite(c: Call, auth: String?) {
         c.branch = "z9hG4bK" + rnd()
@@ -180,6 +184,7 @@ class SipUa(private val s: Settings, private val l: Listener) {
             extra += "P-Asserted-Identity: \"$display\" <sip:${c.caller}@$domain>"
             extra += "X-GSM-Caller: ${c.caller}"
         }
+        if (huntList.isNotBlank()) extra += "X-GSM-Targets: $huntList"
         extra += "Allow: INVITE, ACK, CANCEL, BYE, OPTIONS, INFO, NOTIFY"
         val m = buildRequest("INVITE", targetUri(), c.callId, c.cseq, c.fromTag, targetUri(), null,
             extra, sdp, "application/sdp", c.branch, fromDisplay = display)

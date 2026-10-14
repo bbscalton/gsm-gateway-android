@@ -85,16 +85,16 @@
       </svg>
       Neuereatec GSM Gateway
     </div>
-    <a href="gsm-gateway.apk?v=1.0.0">Download</a>
+    <a href="gsm-gateway.apk?v=1.1.0">Download</a>
   </header>
   <main>
-    <p class="meta">Android · one call per SIM · version 1.0.0</p>
+    <p class="meta">Android · one call per SIM · version 1.1.0 · built-in Headscale tunnel</p>
     <h1>Cellular calls, straight into the phone system.</h1>
     <p class="lede">Put a SIM in a spare Android phone and leave it on the charger. When someone calls that number, the app answers. It then calls an extension on the office PBX and joins the two calls, so the call can be routed like any other.</p>
     <div class="actions">
-      <a class="download" href="gsm-gateway.apk?v=1.0.0" download>Download gsm-gateway.apk</a>
+      <a class="download" href="gsm-gateway.apk?v=1.1.0" download>Download gsm-gateway.apk</a>
       <a class="download alt" href="http://192.168.1.106:8765/">Get setup QR code</a>
-      <a class="download alt" href="gsm-gateway-magisk.zip?v=1.0.0" download>Magisk priv-app module</a>
+      <a class="download alt" href="gsm-gateway-magisk.zip?v=1.1.0" download>Magisk priv-app module</a>
       <span class="meta">2.1 MB · Android 8.0+ · release build · SHA-256 <code>fd8f8f40…1b752b9d</code></span>
     </div>
 
@@ -238,7 +238,7 @@
     <section class="card">
       <h2>Setup QR codes</h2>
       <p class="meta"><a class="download" href="http://192.168.1.106:8765/">Get setup QR code</a></p>
-      <p class="meta">The QR page only opens on the office network or over Headscale, and it asks for the office PIN. <b>PIN: 418043</b>. Gateway extension <b>150</b>, password <code>zr2ZSdfLEFtBGTRdH6Qc</code>. Setup link: <code>gsmgw://setup?server=100.64.0.1&amp;port=5060&amp;ext=150&amp;pw=zr2ZSdfLEFtBGTRdH6Qc&amp;target=105</code>. The Headscale auth key is not published here; get it from the office.</p>
+      <p class="meta">The QR page only opens on the office network, and it asks for the office PIN (ask the administrator). Use the <b>GSM gateway &middot; 150</b> code: it holds the SIP login, a fresh Headscale key and the server. Nothing secret is published on this page.</p>
     </section>
 
     <section class="card warn">
@@ -258,12 +258,12 @@
             <span class="arrow">⇄</span>
             <div class="node"><b>CPBX</b><small>SIP · 100.64.0.1:5060</small></div>
             <span class="arrow">→</span>
-            <div class="node"><b>Ext 105</b><small>then any extension</small></div>
+            <div class="node"><b>Ring list</b><small>100 → 105 → …</small></div>
           </div>
           <ol>
             <li>The app stays registered to the PBX as an ordinary SIP extension. It runs as a foreground service and starts again after a reboot.</li>
             <li>A cellular call rings. If SIP is registered, the app answers it after a short delay (1.5 s by default).</li>
-            <li>The app sends a SIP INVITE to the target extension (default <b>105</b>). It puts the caller's number in the display name, in <code>P-Asserted-Identity</code> and in <code>X-GSM-Caller</code>.</li>
+            <li>The app sends a SIP INVITE to the first extension in the ring list (or to the PBX route <code>gsmgw</code>), then the next one on no answer. It puts the caller's number in the display name, in <code>P-Asserted-Identity</code> and in <code>X-GSM-Caller</code>.</li>
             <li>Audio runs both ways as G.711 (PCMU/PCMA). If the PBX sends keypad presses (RFC 2833), the app plays them as tones to the caller. Keys the caller presses reach the PBX as in-band tones.</li>
             <li>When either side hangs up, the other call ends too.</li>
           </ol>
@@ -272,13 +272,13 @@
         <section style="margin-top: 26px" id="setup">
           <h2>Gateway setup, step by step</h2>
           <ol>
-            <li><b>Install the APK.</b> Download <a href="gsm-gateway.apk?v=1.0.0">gsm-gateway.apk</a> on the gateway phone (the one with the SIM), open it, and allow installing from this source if Android asks.</li>
-            <li><b>Join Headscale.</b> Install the <b>Tailscale</b> app. Choose <i>Use alternate server</i>, enter <code>https://hs.neuereatec.org</code>, and sign in with the auth key from the office. The key is not published here. Leave Tailscale connected.</li>
-            <li><b>Load the settings.</b> Open the <a href="http://192.168.1.106:8765/">setup QR page</a> on another screen and enter the office PIN <b>418043</b>. In the gateway app, tap <b>Scan QR</b> and scan the <b>extension 150</b> code, or copy this link and tap <b>Paste link</b>: <code>gsmgw://setup?server=100.64.0.1&amp;port=5060&amp;ext=150&amp;pw=zr2ZSdfLEFtBGTRdH6Qc&amp;target=105</code>. Then tap <b>Save &amp; restart</b>.</li>
-            <li><b>What the QR contains:</b> server <code>100.64.0.1</code>, port <code>5060</code>, extension <code>150</code>, password <code>zr2ZSdfLEFtBGTRdH6Qc</code> and target extension <code>105</code>. Check the fields match.</li>
+            <li><b>Install the APK.</b> Download <a href="gsm-gateway.apk?v=1.1.0">gsm-gateway.apk</a> on the gateway phone (the one with the SIM), open it, and allow installing from this source if Android asks.</li>
+            <li><b>No Tailscale app needed.</b> Version 1.1 has the Headscale (WireGuard) client built in. The QR carries the join key; the app brings the tunnel up first, then registers SIP over it. Android asks once to allow the VPN: tap <b>OK</b>. If the Tailscale app is installed, turn it off (only one VPN can run).</li>
+            <li><b>Scan the gateway QR.</b> Open the <a href="http://192.168.1.106:8765/">setup QR page</a> on an office screen, enter the PIN, find <b>GSM Gateway &mdash; 150</b>. In the app tap <b>Scan QR</b>. SIPDesk softphone codes are refused on purpose.</li>
+            <li><b>Choose who rings.</b> The app asks <i>Which extension should incoming cellular calls ring?</i> Type the main extension, e.g. <code>100</code>, and add more separated by commas (<code>100, 105</code>): they ring in that order if one does not answer. Leave it blank to let the PBX route the call (route <code>gsmgw</code>, once the PBX has it). Change it later under <b>Bridge</b> &rarr; <b>Change ring order</b>.</li>
             <li><b>Permissions.</b> Tap <b>Permissions</b> and allow the microphone, phone, call logs, answering calls and notifications. Tap <b>Battery</b> and choose <i>Unrestricted</i> (battery optimisation off). <b>Default phone app:</b> version 1.0 can't take the default phone app role and doesn't need it, because it answers calls with the “Answer phone calls” permission. Keep your normal dialer as the default.</li>
-            <li><b>Check the status.</b> The top panel should read <b>SIP: Registered</b> and <b>Gateway: Idle</b>.</li>
-            <li><b>Test.</b> Call the SIM from another mobile. The gateway answers in about 2 s and extension <b>105</b> rings with the mobile's number. Answer 105 and talk both ways. Press keys on 105 and listen for the tones on the mobile. Hang up on the mobile and check 105 drops. Call again, hang up on 105, and check the mobile drops.</li>
+            <li><b>Check the status.</b> The top panel should read <b>Tunnel: Online</b> with a <b>100.64.x.x</b> tailnet IP, <b>SIP: Registered</b> and <b>Gateway: Idle</b>.</li>
+            <li><b>Test.</b> Call the SIM from another mobile. The gateway answers in about 2 s and the first extension in your list rings with the mobile's number. Answer it and talk both ways. Press keys on the desk phone and listen for the tones on the mobile. Hang up on the mobile and check the desk phone drops. Call again, hang up on the desk phone, and check the mobile drops.</li>
             <li>Rooted phone only: add the <a href="#root">Magisk priv-app</a> module for cleaner audio.</li>
           </ol>
         </section>
@@ -287,24 +287,24 @@
           <h2>Gateway troubleshooting</h2>
           <table>
             <tr><th>Level bar stays at 0 during a call</th><td>The phone is blocking call audio. Tick <b>Force speakerphone mode</b>, tap Save &amp; restart, and call again.</td></tr>
-            <tr><th>Not registered</th><td>Check Tailscale: it must be connected to <code>hs.neuereatec.org</code>, and the phone must reach <code>100.64.0.1</code>. Then check the extension and password (scan the QR again).</td></tr>
+            <tr><th>Not registered</th><td>Look at <b>Tunnel</b> first. <i>NeedsLogin</i> = the key was used or expired: make a <b>New key</b> for 150 on the QR page and scan again. <i>Stopped</i> = VPN permission missing or another VPN app is on. Once the tunnel is Online, SIP registers by itself.</td></tr>
             <tr><th>Phone rings but is not answered</th><td>SIP must be <b>Registered</b> (the app won't answer otherwise), and “Answer phone calls” must be allowed.</td></tr>
-            <tr><th>Stops working after a while or after a reboot</th><td>Set Battery to Unrestricted and open the app once after each reboot.</td></tr>
+            <tr><th>Stops working after a while or after a reboot</th><td>Set Battery to Unrestricted. The tunnel and gateway restart after a reboot by themselves; if the status shows <i>VPN permission missing</i>, open the app once.</td></tr>
           </table>
         </section>
 
         <section class="card">
           <h2>What to configure</h2>
           <table>
-            <tr><th>SIP server</th><td><b>100.64.0.1</b> (Headscale). This is the default and works now. <code>neuereatec.org</code> is in the list, but the public address is <b>coming soon</b>: there is no DNS record or port forward yet. A LAN address such as 192.168.x.x also works on site.</td></tr>
+            <tr><th>Headscale</th><td>URL and key come from the QR. Blank URL = no tunnel (LAN use).</td></tr><tr><th>SIP server</th><td><b>100.64.0.1</b> over the built-in tunnel, or a LAN address such as 192.168.x.x.</td></tr>
             <tr><th>Port</th><td>5060 (UDP)</td></tr>
             <tr><th>Extension</th><td>The gateway's own SIP extension (from the administrator)</td></tr>
             <tr><th>Password</th><td>That extension's SIP password</td></tr>
-            <tr><th>Target extension</th><td>Where cellular calls go: <b>105</b> by default. Use a ring group or IVR number to spread calls.</td></tr>
+            <tr><th>Ring order</th><td>Extensions in order, e.g. <code>100, 105</code>, each rung for <i>Ring each for</i> seconds (20). Blank = send to the PBX route.</td></tr>
             <tr><th>Answer after</th><td>Delay before answering, in milliseconds (1500)</td></tr>
             <tr><th>Audio mode</th><td>Chosen automatically: <i>Rooted: call audio interception</i>, <i>Rooted: VOICE_CALL capture</i> or <i>Speakerphone (lower quality)</i>. Tick “Force speakerphone mode” to override.</td></tr>
           </table>
-          <p class="meta">Setup link / QR: <code>gsmgw://setup?server=100.64.0.1&amp;port=5060&amp;ext=150&amp;pw=zr2ZSdfLEFtBGTRdH6Qc&amp;target=105</code>. The app also accepts <code>sipdesk://setup?…</code> links. If SIPDesk is also installed, Android asks which app should open the link.</p>
+          <p class="meta">Setup link format: <code>gsmgw://setup?server=&amp;port=&amp;ext=&amp;pw=&amp;hs=&amp;hskey=&amp;target=&amp;ring=&amp;route=</code>. The real code with the password and key is only on the office QR page.</p>
         </section>
 
         <section class="card" id="root">
@@ -345,7 +345,7 @@
       <ol>
         <li>Download SIPDesk from <a href="https://bbscalton.github.io/sipdesk-android/">bbscalton.github.io/sipdesk-android</a> and install it.</li>
         <li>Connect it to Headscale (<code>https://hs.neuereatec.org</code>) with the auth key from the office.</li>
-        <li>Open SIPDesk <b>Settings → Scan QR code</b> and scan that user's extension QR from the <a href="http://192.168.1.106:8765/">setup QR page</a> (office PIN 418043). Then tap <b>Save &amp; Connect</b>.</li>
+        <li>Open SIPDesk <b>Settings → Scan QR code</b> and scan that user's extension QR from the <a href="http://192.168.1.106:8765/">setup QR page</a> (office PIN from the administrator). Then tap <b>Save &amp; Connect</b>.</li>
         <li>Test: dial <b>600</b> (echo test) and check you hear yourself. Then call <b>104</b>, the JavisLink softphone, and talk both ways.</li>
       </ol>
       <p class="meta"><a class="download alt" href="https://bbscalton.github.io/sipdesk-android/">Open the SIPDesk download page</a></p>
