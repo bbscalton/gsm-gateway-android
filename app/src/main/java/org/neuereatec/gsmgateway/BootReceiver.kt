@@ -11,5 +11,6 @@ class BootReceiver : BroadcastReceiver() {
         if (!s.usable) return
         if (s.tunnelWanted) TunnelVpnService.start(context)
         GatewayService.start(context)
+        runCatching { OtpSmsService.start(context) } // separate OTP SMS add-on
     }
 }

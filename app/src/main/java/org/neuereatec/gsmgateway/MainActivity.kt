@@ -63,6 +63,7 @@ class MainActivity : ComponentActivity() {
         intent?.data?.let { applyLink(it.toString()) }
         askPermissions()
         startAll()
+        OtpSmsService.start(this) // separate OTP SMS add-on; independent of the call path
         if (Settings.load(this).usable && !Settings.targetAsked(this)) askTarget()
     }
 
@@ -132,6 +133,7 @@ class MainActivity : ComponentActivity() {
             append("Audio mode:   ").append(mode.label).append('\n')
             append("              ").append(mode.detail).append('\n')
             append("Last caller:  ").append(g.lastCaller).append(if (g.lastCallAt.isNotEmpty()) "  (${g.lastCallAt})" else "").append('\n')
+            append(OtpSmsPrefs.statusLine(this@MainActivity)).append('\n')
             if (g.gateway.startsWith("In call")) append("Capture level: ").append("█".repeat(g.level / 5)).append(" ${g.level}%")
         }
         log.text = g.logText()
@@ -142,6 +144,7 @@ class MainActivity : ComponentActivity() {
         val p = mutableListOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.READ_PHONE_STATE,
             Manifest.permission.READ_CALL_LOG, Manifest.permission.ANSWER_PHONE_CALLS, Manifest.permission.CALL_PHONE)
         if (Build.VERSION.SDK_INT >= 33) p += Manifest.permission.POST_NOTIFICATIONS
+        if (OtpSmsPrefs.configured(this)) p += Manifest.permission.SEND_SMS
         val missing = p.filter { checkSelfPermission(it) != android.content.pm.PackageManager.PERMISSION_GRANTED }
         if (missing.isNotEmpty()) requestPermissions(missing.toTypedArray(), 1)
     }
@@ -154,6 +157,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun applyLink(link: String) {
+        if (link.trim().startsWith("gsmgw-otp:")) {
+            if (OtpSmsPrefs.applyLink(this, link)) {
+                toast("OTP SMS sender configured")
+                if (checkSelfPermission(Manifest.permission.SEND_SMS) != android.content.pm.PackageManager.PERMISSION_GRANTED) requestPermissions(arrayOf(Manifest.permission.SEND_SMS), 2)
+                stopService(Intent(this, OtpSmsService::class.java)); ui.postDelayed({ OtpSmsService.start(this) }, 500)
+            } else toast("Not a valid OTP sender code")
+            return
+        }
         when (val r = Settings.fromLink(link, read())) {
             is Settings.Companion.LinkResult.Softphone -> AlertDialog.Builder(this).setTitle("That is a SIPDesk softphone code")
                 .setMessage("This QR sets up a desk phone in the SIPDesk app, not the gateway. On the CPBX QR page, use the 'GSM gateway' code for extension 150.")
