@@ -85,16 +85,16 @@
       </svg>
       Neuereatec GSM Gateway
     </div>
-    <a href="gsm-gateway.apk?v=1.1.0">Download</a>
+    <a href="gsm-gateway.apk?v=1.1.1">Download</a>
   </header>
   <main>
-    <p class="meta">Android · one call per SIM · version 1.1.0 · built-in Headscale tunnel</p>
+    <p class="meta">Android · one call per SIM · version 1.1.1 · built-in Headscale tunnel</p>
     <h1>Cellular calls, straight into the phone system.</h1>
     <p class="lede">Put a SIM in a spare Android phone and leave it on the charger. When someone calls that number, the app answers. It then calls an extension on the office PBX and joins the two calls, so the call can be routed like any other.</p>
     <div class="actions">
-      <a class="download" href="gsm-gateway.apk?v=1.1.0" download>Download gsm-gateway.apk</a>
+      <a class="download" href="gsm-gateway.apk?v=1.1.1" download>Download gsm-gateway.apk</a>
       <a class="download alt" href="http://192.168.1.106:8765/">Get setup QR code</a>
-      <a class="download alt" href="gsm-gateway-magisk.zip?v=1.1.0" download>Magisk priv-app module</a>
+      <a class="download alt" href="gsm-gateway-magisk.zip?v=1.1.1" download>Magisk priv-app module</a>
       <span class="meta">2.1 MB · Android 8.0+ · release build · SHA-256 <code>fd8f8f40…1b752b9d</code></span>
     </div>
 
@@ -160,7 +160,7 @@
       <h2>Softphone downloads and links</h2>
       <ul>
         <li><b>SIPDesk 2.1.1</b> (Android desk phone): <a href="https://bbscalton.github.io/sipdesk-android/sipdesk.apk?v=2.1.1">sipdesk.apk</a> · <a href="https://bbscalton.github.io/sipdesk-android/">download page</a></li>
-        <li><b>GSM Gateway 1.1.0</b> (SIM bridge): <a href="gsm-gateway.apk?v=1.1.0">gsm-gateway.apk</a> · <a href="gsm-gateway-magisk.zip?v=1.1.0">Magisk module</a></li>
+        <li><b>GSM Gateway 1.1.1</b> (SIM bridge): <a href="gsm-gateway.apk?v=1.1.1">gsm-gateway.apk</a> · <a href="gsm-gateway-magisk.zip?v=1.1.1">Magisk module</a></li>
         <li><b>JavisLink softphone</b> (opens in the browser, nothing to install): <a href="https://javis.neuereatec.org/softphone/">javis.neuereatec.org/softphone</a></li>
         <li>Setup QR page (office Wi-Fi only): <a href="http://192.168.1.106:8765/">192.168.1.106:8765</a>, PIN <b>418043</b></li>
       </ul>
@@ -272,10 +272,10 @@
         <section style="margin-top: 26px" id="setup">
           <h2>Gateway setup, step by step</h2>
           <ol>
-            <li><b>Install the APK.</b> Download <a href="gsm-gateway.apk?v=1.1.0">gsm-gateway.apk</a> on the gateway phone (the one with the SIM), open it, and allow installing from this source if Android asks.</li>
+            <li><b>Install the APK.</b> Download <a href="gsm-gateway.apk?v=1.1.1">gsm-gateway.apk</a> on the gateway phone (the one with the SIM), open it, and allow installing from this source if Android asks.</li>
             <li><b>No Tailscale app needed.</b> Version 1.1 has the Headscale (WireGuard) client built in. The QR carries the join key; the app brings the tunnel up first, then registers SIP over it. Android asks once to allow the VPN: tap <b>OK</b>. If the Tailscale app is installed, turn it off (only one VPN can run).</li>
             <li><b>Scan the gateway QR.</b> Open the <a href="http://192.168.1.106:8765/">setup QR page</a> on an office screen, enter the PIN, find <b>GSM Gateway &mdash; 150</b>. In the app tap <b>Scan QR</b>. SIPDesk softphone codes are refused on purpose.</li>
-            <li><b>Choose who rings.</b> The app asks <i>Which extension should incoming cellular calls ring?</i> Type the main extension, e.g. <code>100</code>, and add more separated by commas (<code>100, 105</code>): they ring in that order if one does not answer. Leave it blank to let the PBX route the call (route <code>gsmgw</code>, once the PBX has it). Change it later under <b>Bridge</b> &rarr; <b>Change ring order</b>.</li>
+            <li><b>Choose who rings.</b> The app asks <i>Which extension should incoming cellular calls ring?</i> Type the main extension, e.g. <code>100</code>, and add more separated by commas (<code>100, 105</code>): the PBX rings them in that order, 20 s each, skips anyone busy or offline, then goes to the first one's voicemail. Numbers are used exactly as typed. Leave it blank for the PBX default (100). Change it later under <b>Bridge</b> &rarr; <b>Change ring order</b>.</li>
             <li><b>Permissions.</b> Tap <b>Permissions</b> and allow the microphone, phone, call logs, answering calls and notifications. Tap <b>Battery</b> and choose <i>Unrestricted</i> (battery optimisation off). <b>Default phone app:</b> version 1.0 can't take the default phone app role and doesn't need it, because it answers calls with the “Answer phone calls” permission. Keep your normal dialer as the default.</li>
             <li><b>Check the status.</b> The top panel should read <b>Tunnel: Online</b> with a <b>100.64.x.x</b> tailnet IP, <b>SIP: Registered</b> and <b>Gateway: Idle</b>.</li>
             <li><b>Test.</b> Call the SIM from another mobile. The gateway answers in about 2 s and the first extension in your list rings with the mobile's number. Answer it and talk both ways. Press keys on the desk phone and listen for the tones on the mobile. Hang up on the mobile and check the desk phone drops. Call again, hang up on the desk phone, and check the mobile drops.</li>
@@ -287,7 +287,7 @@
           <h2>Gateway troubleshooting</h2>
           <table>
             <tr><th>Level bar stays at 0 during a call</th><td>The phone is blocking call audio. Tick <b>Force speakerphone mode</b>, tap Save &amp; restart, and call again.</td></tr>
-            <tr><th>Not registered</th><td>Look at <b>Tunnel</b> first. <i>NeedsLogin</i> = the key was used or expired: make a <b>New key</b> for 150 on the QR page and scan again. <i>Stopped</i> = VPN permission missing or another VPN app is on. Once the tunnel is Online, SIP registers by itself.</td></tr>
+            <tr><th>Not registered</th><td>Look at <b>Tunnel</b> first. <i>Key used up</i> / <i>NeedsLogin</i> = the key was spent or expired: make a <b>New key</b> for 150 on the QR page and scan again. <i>Stopped</i> = VPN permission missing or another VPN app is on. Once the tunnel is Online, SIP registers by itself.</td></tr>
             <tr><th>Phone rings but is not answered</th><td>SIP must be <b>Registered</b> (the app won't answer otherwise), and “Answer phone calls” must be allowed.</td></tr>
             <tr><th>Stops working after a while or after a reboot</th><td>Set Battery to Unrestricted. The tunnel and gateway restart after a reboot by themselves; if the status shows <i>VPN permission missing</i>, open the app once.</td></tr>
           </table>
@@ -300,7 +300,7 @@
             <tr><th>Port</th><td>5060 (UDP)</td></tr>
             <tr><th>Extension</th><td>The gateway's own SIP extension (from the administrator)</td></tr>
             <tr><th>Password</th><td>That extension's SIP password</td></tr>
-            <tr><th>Ring order</th><td>Extensions in order, e.g. <code>100, 105</code>, each rung for <i>Ring each for</i> seconds (20). Blank = send to the PBX route.</td></tr>
+            <tr><th>Ring order</th><td>Extensions in order, e.g. <code>100, 105</code>. Sent to the PBX on every call; the PBX hunts (20 s each, skips busy/offline, then voicemail). Blank = PBX default 100.</td></tr>
             <tr><th>Answer after</th><td>Delay before answering, in milliseconds (1500)</td></tr>
             <tr><th>Audio mode</th><td>Chosen automatically: <i>Rooted: call audio interception</i>, <i>Rooted: VOICE_CALL capture</i> or <i>Speakerphone (lower quality)</i>. Tick “Force speakerphone mode” to override.</td></tr>
           </table>

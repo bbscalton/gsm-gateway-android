@@ -77,13 +77,22 @@ class GatewayService : Service(), SipUa.Listener {
     }
 
     /** Tunnel first: SIP registers only once the tailnet is up, and is dropped if it goes down. */
+    private var lostSince = 0L
     private val gate = object : Runnable {
         override fun run() {
             val up = !settings.tunnelWanted || GatewayState.tunnelReady
+            if (up) lostSince = 0L
             if (up && sip == null) {
                 GatewayState.sip = "Registering to ${settings.server}:${settings.port}"
                 GatewayState.log(if (settings.tunnelWanted) "Tunnel up (${GatewayState.tunnelIp}); starting SIP" else "Starting SIP (no tunnel configured)")
                 sip = SipUa(settings, this@GatewayService).also { it.start() }
+            } else if (!up && bridging) {
+                // Data lost mid-call: give the network 20 s, then end both legs cleanly.
+                if (lostSince == 0L) lostSince = System.currentTimeMillis()
+                else if (System.currentTimeMillis() - lostSince > 20_000) {
+                    GatewayState.log("Tunnel lost for 20s during a call; ending it")
+                    endBridge("Data connection lost", hangGsm = true); lostSince = 0L
+                }
             } else if (!up && sip != null && !bridging) {
                 GatewayState.log("Tunnel down; SIP paused until it reconnects")
                 sip?.stop(); sip = null
@@ -149,8 +158,11 @@ class GatewayService : Service(), SipUa.Listener {
     }
 
     private fun onRinging(prev: String) {
-        if (bridging || prev == TelephonyManager.EXTRA_STATE_OFFHOOK) {
-            GatewayState.log("Second cellular call ignored (one call at a time)"); return
+        if (bridging || answerPending || prev == TelephonyManager.EXTRA_STATE_OFFHOOK) {
+            // One SIM = one voice call. Behave like a person on a call: reject the waiting call
+            // so the carrier gives busy / voicemail. Telecom rejects the RINGING call first.
+            GatewayState.log("Second cellular call rejected as busy (one call at a time)")
+            rejectWaiting(); return
         }
         GatewayState.gateway = "Ringing"
         updateNote()
@@ -158,6 +170,14 @@ class GatewayService : Service(), SipUa.Listener {
         if (!GatewayState.registered) { GatewayState.log("Ringing but SIP not registered: not answering"); return }
         answerPending = true
         main.postDelayed({ answerGsm() }, settings.answerDelayMs.toLong())
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun rejectWaiting() {
+        try {
+            @Suppress("DEPRECATION")
+            getSystemService(TelecomManager::class.java).endCall()
+        } catch (e: Exception) { GatewayState.log("Could not reject waiting call: ${e.message}") }
     }
 
     @SuppressLint("MissingPermission")
@@ -200,7 +220,7 @@ class GatewayService : Service(), SipUa.Listener {
         val r = Rtp()
         rtp = r
         GatewayState.log("Bridging ${GatewayState.lastCaller} -> ${settings.targetLabel}")
-        sip?.huntList = settings.targets.joinToString(",")
+        sip?.huntList = settings.huntHeader
         nextHop(caller)
     }
 
@@ -228,7 +248,6 @@ class GatewayService : Service(), SipUa.Listener {
         val r = rtp ?: return
         if (sip == null) { endBridge("SIP not running", hangGsm = true); return }
         sip?.invite(caller, r.localPort, t)
-        if (!settings.routeMode) main.postDelayed(ringTimeout, settings.ringSeconds * 1000L)
     }
 
     override fun onAnswered(remoteIp: String, remotePort: Int, payloadType: Int, dtmfPt: Int) = main.post {
@@ -247,8 +266,7 @@ class GatewayService : Service(), SipUa.Listener {
 
     override fun onEnded(reason: String) = main.post {
         GatewayState.log("SIP leg ended: $reason")
-        if (bridging && !sipLegUp && !settings.routeMode) nextHop(bridgeCaller)  // busy/unavailable/no answer -> hop
-        else if (bridging) endBridge(reason, hangGsm = true)
+        if (bridging) endBridge(reason, hangGsm = true)
     }.let {}
 
     @SuppressLint("MissingPermission")

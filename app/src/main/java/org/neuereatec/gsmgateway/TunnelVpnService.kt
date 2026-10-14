@@ -83,6 +83,8 @@ class TunnelVpnService : VpnService() {
     private fun runOnce(reset: Boolean, gen: Int): Boolean {
         val s = Settings.load(this)
         if (!s.tunnelWanted) return true
+        // Node/machine keys live in persistent app storage (files/, not cache/), so a reboot or app
+        // update logs back in without spending the pre-auth key again. Only a reset or uninstall wipes it.
         val dir = File(filesDir, "tailscale").apply { mkdirs() }.absolutePath
         if (reset) Tunnel.resetState(dir)
         val cu = File(dir, "control.url")
@@ -93,8 +95,9 @@ class TunnelVpnService : VpnService() {
             Tunnel.start(dir, host)
             Tunnel.login(s.hsUrl, s.hsKey, nodeName(dir))
         } catch (t: Throwable) {
-            GatewayState.log("Tunnel login failed: ${GatewayState.redact(t.message ?: t.javaClass.simpleName)}")
-            set("NeedsLogin", "", t.message ?: "login failed")
+            val msg = t.message ?: t.javaClass.simpleName
+            GatewayState.log("Tunnel login failed: ${GatewayState.redact(msg)}")
+            set("NeedsLogin", "", if (msg.contains("already used", true)) KEY_USED else msg)
             return false
         }
         var lastShown = ""
@@ -111,8 +114,14 @@ class TunnelVpnService : VpnService() {
                 getSystemService(NotificationManager::class.java).notify(NID,
                     note(if (GatewayState.tunnelReady) "Tunnel $ip" else "Tunnel ${st.ifBlank { "connecting" }}"))
             }
-            if (st == "NeedsLogin" && (det.contains("auth", true) || det.contains("401") || det.contains("invalid", true))) {
-                GatewayState.log("Tunnel: Headscale rejected the key (spent/expired?). Scan a fresh gateway QR.")
+            if (det.contains("already used", true)) {
+                set(st, ip, KEY_USED)
+                GatewayState.log("Tunnel: $KEY_USED")
+                return false
+            }
+            if (st == "NeedsLogin" && (det.contains("auth", true) || det.contains("401") || det.contains("invalid", true) || det.contains("expired", true))) {
+                set(st, ip, "Key rejected or expired \u2014 tap New key on the QR page and scan again")
+                GatewayState.log("Tunnel: Headscale rejected the key (${GatewayState.redact(det)})")
                 return false
             }
             if (GatewayState.tunnelReady) notReadySince = System.currentTimeMillis()
@@ -169,6 +178,7 @@ class TunnelVpnService : VpnService() {
     companion object {
         private const val CH = "tunnel"
         private const val NID = 2
+        const val KEY_USED = "Key used up \u2014 tap New key on the QR page and scan again"
         /** Starts the tunnel if configured and VPN consent exists. Returns false if consent is missing. */
         fun start(c: Context, reset: Boolean = false): Boolean {
             if (!Settings.load(c).tunnelWanted) return true

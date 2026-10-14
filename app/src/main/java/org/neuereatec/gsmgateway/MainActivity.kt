@@ -90,7 +90,7 @@ class MainActivity : ComponentActivity() {
             setText(cur.targets.joinToString(", "))
         }
         val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(8), dp(20), 0)
-            addView(TextView(this@MainActivity).apply { text = "Type the main extension. Add more, separated by commas, to ring next if it is busy or does not answer (in that order). Leave blank to let CPBX route the call ('${cur.route}')." })
+            addView(TextView(this@MainActivity).apply { text = "Type the main extension. Add more, separated by commas, to ring next if it is busy or does not answer (in that order). CPBX rings them and skips anyone busy or offline. Leave blank for the CPBX default (100)." })
             addView(input) }
         val d = AlertDialog.Builder(this).setTitle("Which extension should incoming cellular calls ring?")
             .setView(box).setPositiveButton("Save", null).setNegativeButton("Later", null).create()
@@ -100,7 +100,7 @@ class MainActivity : ComponentActivity() {
                 if (list == null) { input.error = "Digits only, separated by commas"; return@setOnClickListener }
                 val s = Settings.load(this).copy(targets = list)
                 Settings.save(this, s); fill(s); d.dismiss()
-                toast(if (list.isEmpty()) "Calls go to CPBX route '${s.route}'" else "Calls ring ${s.targetLabel}")
+                toast("Calls ring ${s.targetLabel}")
                 GatewayService.stop(this); ui.postDelayed({ startAll() }, 600)
             }
         }
@@ -235,10 +235,10 @@ class MainActivity : ComponentActivity() {
         pw = edit("Password", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD); root.addView(pw)
 
         root.addView(section("Bridge"))
-        root.addView(text("Ring order: first extension, then the next ones if busy or no answer. Blank = CPBX route.", 12f, muted))
+        root.addView(text("Ring order: CPBX rings these extension numbers in order (20 s each, skipping busy or offline ones), then the first one's voicemail. Blank = CPBX default (100).", 12f, muted))
         target = edit("Extensions in order, e.g. 100, 105", InputType.TYPE_CLASS_PHONE); root.addView(target)
-        ring = edit("Ring each for (seconds)", InputType.TYPE_CLASS_NUMBER); root.addView(ring)
-        route = edit("CPBX route when list is blank (gsmgw)"); root.addView(route)
+        ring = edit("Ring each for (seconds)", InputType.TYPE_CLASS_NUMBER).apply { visibility = View.GONE }; root.addView(ring)
+        route = edit("CPBX route (gsmgw)"); root.addView(route)
         root.addView(button("Change ring order\u2026", small = true) { askTarget() })
         delay = edit("Answer after (ms)", InputType.TYPE_CLASS_NUMBER); root.addView(delay)
         auto = check("Auto-answer cellular calls"); root.addView(auto)

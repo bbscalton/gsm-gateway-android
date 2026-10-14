@@ -28,10 +28,12 @@ data class Settings(
 ) {
     val usable get() = server.isNotBlank() && ext.isNotBlank()
     val tunnelWanted get() = hsUrl.isNotBlank()
-    val routeMode get() = targets.isEmpty()
-    /** What the bridge dials, in order. */
-    val dialPlan: List<String> get() = if (routeMode) listOf(route.ifBlank { DEFAULT_ROUTE }) else targets
-    val targetLabel get() = if (routeMode) "CPBX route '${route}'" else targets.joinToString(" \u2192 ")
+    /** 1.1.1: CPBX always hunts. The app sends one INVITE to [route] carrying [targets] in X-GSM-Targets. */
+    val routeMode get() = true
+    val dialPlan: List<String> get() = listOf(route.ifBlank { DEFAULT_ROUTE })
+    /** Exact CPBX extension numbers, as typed; never empty when one is set. */
+    val huntHeader get() = targets.joinToString(",")
+    val targetLabel get() = if (targets.isEmpty()) "CPBX default (100)" else targets.joinToString(" \u2192 ")
 
     companion object {
         const val DEFAULT_SERVER = "100.64.0.1"
